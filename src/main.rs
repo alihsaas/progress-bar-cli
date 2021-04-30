@@ -1,6 +1,7 @@
 use console::Term;
 use std::{convert::*, io, thread, time::Duration, time::Instant};
 
+#[derive(Debug)]
 struct ProgressBar {
     target: u64,
     current: u64,
@@ -39,10 +40,18 @@ impl ProgressBar {
             let elapsed = self.elapsed_time.elapsed().as_secs();
             let (hour, min, sec) = (elapsed / 3600, (elapsed / 60) % 60, elapsed % 60);
 
-            let formated = self.format.replace(
-                "{elapsed_time}",
-                &format!("{:02}:{:02}:{:02}", hour, min, sec),
-            );
+            let formated = self
+                .format
+                .replace(
+                    "{elapsed_time}",
+                    &format!("{:02}:{:02}:{:02}", hour, min, sec),
+                )
+                .replace("{target}", &self.target.to_string())
+                .replace("{current}", &self.current.to_string())
+                .replace(
+                    "{percentage}",
+                    &format!("{}%", (self.current * 100) / self.target),
+                );
 
             let progress_length = u64::try_from(w).unwrap();
             let progress_length: u64 = progress_length
@@ -50,13 +59,18 @@ impl ProgressBar {
 
             let numeric_progress: u64 = (self.current * (progress_length)) / self.target;
             let progress_left = progress_length - numeric_progress;
+            let mut progress_chars = self.progress_chars.chars();
             let progress = format!(
                 "{}{}{}",
-                self.progress_chars[0..1]
+                progress_chars
+                    .next()
+                    .unwrap()
                     .to_string()
                     .repeat(usize::try_from(numeric_progress).unwrap() - 1usize),
-                self.progress_chars[1..2].to_string(),
-                self.progress_chars[2..3]
+                progress_chars.next().unwrap().to_string(),
+                progress_chars
+                    .next()
+                    .unwrap()
                     .to_string()
                     .repeat(progress_left.try_into().unwrap())
             );
@@ -80,8 +94,8 @@ impl ProgressBar {
 fn main() -> io::Result<()> {
     let mut progress_bar = ProgressBar::new(1000);
     progress_bar
-        .set_format("{elapsed_time} {progress} World")
-        .set_progress_chars("M>~");
+        .set_format("[{elapsed_time}] {progress} {current}/{target} : {percentage}")
+        .set_progress_chars("█>░");
 
     loop {
         progress_bar.increment(100);
