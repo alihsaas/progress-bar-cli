@@ -30,6 +30,11 @@ impl ProgressBar {
         self
     }
 
+    fn set_progress_chars(&mut self, chars: &str) -> &mut ProgressBar {
+        self.progress_chars = String::from(chars);
+        self
+    }
+
     fn draw(&self) -> io::Result<()> {
         let size = self.term.size_checked();
 
@@ -65,7 +70,9 @@ impl ProgressBar {
 fn main() -> io::Result<()>{
 
     let mut progress_bar = ProgressBar::new(1000);
-    progress_bar.set_format("Hello {progress} World");
+    progress_bar
+        .set_format("Hello {progress} World")
+        .set_progress_chars("M>~");
 
     loop {
 
