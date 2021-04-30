@@ -2,7 +2,8 @@ use std::{
     convert::*,
     io,
     thread,
-    time::Duration
+    time::Duration,
+    time::Instant,
 };
 use console::Term;
 
@@ -12,6 +13,7 @@ struct ProgressBar {
     term: Term,
     progress_chars: String,
     format: String,
+    elapsed_time: Instant,
 }
 
 impl ProgressBar {
@@ -22,6 +24,7 @@ impl ProgressBar {
             term: Term::stdout(),
             format: String::from("{progress}"),
             progress_chars: String::from("#>-"),
+            elapsed_time: Instant::now(),
         }
     }
 
@@ -40,8 +43,20 @@ impl ProgressBar {
 
         if let Some((_h, w)) = size {
 
+            let elapsed = self.elapsed_time.elapsed().as_secs();
+            let (hour, min, sec) = (
+                elapsed / 3600,
+                (elapsed / 60) % 60,
+                elapsed % 60
+            );
+
+            let formated = self.format
+                .replace("{elapsed_time}", &format!(
+                        "{:02}:{:02}:{:02}", hour, min, sec)
+                );
+
             let progress_length = u64::try_from(w).unwrap();
-            let progress_length: u64 = progress_length.wrapping_sub(self.format.replace("{progress}", "").len().try_into().unwrap());
+            let progress_length: u64 = progress_length.wrapping_sub(formated.replace("{progress}", "").len().try_into().unwrap());
 
             let numeric_progress: u64 = (self.current * (progress_length)) / self.target;
             let progress_left = progress_length - numeric_progress;
@@ -50,7 +65,9 @@ impl ProgressBar {
                 self.progress_chars[1..2].to_string(),
                 self.progress_chars[2..3].to_string().repeat(progress_left.try_into().unwrap())
             );
-            let formated = self.format.replace("{progress}", progress.as_str());
+            let formated = formated
+                .replace("{progress}", &progress);
+
             self.term.clear_line()?;
             self.term.write_str(&formated)?;
         } else {
@@ -71,7 +88,7 @@ fn main() -> io::Result<()>{
 
     let mut progress_bar = ProgressBar::new(1000);
     progress_bar
-        .set_format("Hello {progress} World")
+        .set_format("{elapsed_time} {progress} World")
         .set_progress_chars("M>~");
 
     loop {
